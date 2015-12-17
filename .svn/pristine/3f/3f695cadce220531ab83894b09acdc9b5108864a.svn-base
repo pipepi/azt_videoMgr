@@ -1,0 +1,32 @@
+/**
+ * 
+ */
+package com.aepan.sysmgr.web.controller;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.ModelMap;
+import org.springframework.web.bind.annotation.RequestMapping;
+
+/**
+ * 视频文件存储到本地控制器    
+ * 然后异步处理上传的视频
+ * @author lanker
+ * 2015年11月26日上午10:18:48
+ */
+@Controller
+public class VideoLocalController extends DataTableController {
+	private static final Logger logger = LoggerFactory.getLogger(VideoLocalController.class);
+	@RequestMapping("videolocal/upload")
+	public String uploadVideo(HttpServletRequest request,HttpServletResponse res,ModelMap model){
+		if(!isLogin(request)){
+			return "redirect:/";
+		}
+		
+		return null;
+	}
+}

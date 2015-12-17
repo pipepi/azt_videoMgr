@@ -1,0 +1,156 @@
+/**
+ * 
+ */
+package com.aepan.sysmgr.util;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.io.StringReader;
+import java.io.UnsupportedEncodingException;
+import java.net.URL;
+import java.net.URLConnection;
+import java.net.URLEncoder;
+
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.Unmarshaller;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.aepan.sysmgr.model.config.SmsConfig;
+import com.aepan.sysmgr.model.sms.Xml;
+import com.aepan.sysmgr.service.ConfigService;
+
+/**
+ * @author lanker
+ * 2015年9月24日下午2:46:59
+ */
+public class SmsUtil {
+	private static final Logger logger = LoggerFactory.getLogger(SmsUtil.class);
+	/**
+	 * 发送一条短信
+	 * @param c 发送内容(总长度应在1000个汉字以内)
+	 * @param m 手机号码，如多个以英文逗号分隔 13688998866,15899668855
+	 * @throws UnsupportedEncodingException 
+	 */
+	public static Xml send(String c,String m,ConfigService cs,int type){
+		SmsConfig conf = ConfigManager.getInstance().getSmsConfig(cs);
+		return send(c, m, conf,type);
+	}
+	private static Xml send(String c,String m,SmsConfig conf,int type){
+		if(c==null||c.trim().isEmpty()||c.trim().length()>1000||m==null||m.trim().isEmpty()){
+			logger.info("send param error  c= "+c+"  m= "+m);
+			return null;
+		}
+		try {
+			c = URLEncoder.encode(c, "UTF-8");
+		} catch (UnsupportedEncodingException e) {
+			logger.info("send content encode error  c= "+c+"  m= "+m);
+			return null;
+		}
+		StringBuffer parambuffer = new StringBuffer();
+		parambuffer.append("action=sendOnce&");
+		String url = "";
+		if(type==SmsConfig.TYPE_验证码){
+			parambuffer.append("ac="+conf.ac+"&");
+			parambuffer.append("authkey="+conf.authkey+"&");
+			parambuffer.append("cgid="+conf.cgid+"&");
+			parambuffer.append("csid=52"+conf.csid+"&");
+			url = conf.url;
+		}else{
+			parambuffer.append("ac="+conf.oth_ac+"&");
+			parambuffer.append("authkey="+conf.oth_authkey+"&");
+			parambuffer.append("cgid="+conf.oth_cgid+"&");
+			parambuffer.append("csid=52"+conf.oth_csid+"&");
+			url = conf.oth_url;
+		}
+		parambuffer.append("c=").append(c).append("&");
+		parambuffer.append("m=").append(m);
+		String param = parambuffer.toString();
+		logger.info("send param = "+param);
+		String xmlrs = post(url,param);
+		
+		logger.info("send xmlrs = "+xmlrs);
+		return doRs(xmlrs);
+		
+	}
+	public static void main(String[] args) throws UnsupportedEncodingException {
+		
+		SmsConfig smsConfig = new SmsConfig();
+		smsConfig.url = "http://smsapi.c123.cn/OpenPlatform/OpenApi";
+		smsConfig.ac = "1001@501176370003";
+		smsConfig.authkey = "DF007ADB8A1C5B02A9BF27C368FB945A";
+		smsConfig.cgid = "52";
+		smsConfig.csid = "";
+		
+		Xml xml = send("dd测试", "15875589605", smsConfig,SmsConfig.TYPE_验证码);
+		System.out.println(xml.toString());
+		
+		//send("测试","18679795883");
+//		String xmlrs = "<xml name=\"sendOnce\" result=\"1\"><Item cid=\"501176370003\" sid=\"1001\" msgid=\"52261791705342400\" total=\"1\" price=\"0.1\" remain=\"20.400\" /></xml>";
+//		doRs(xmlrs);
+	}
+	private static Xml doRs(String xmlStr){
+		try {  
+            JAXBContext context = JAXBContext.newInstance(Xml.class);  
+            Unmarshaller unmarshaller = context.createUnmarshaller();  
+            Xml rs = (Xml)unmarshaller.unmarshal(new StringReader(xmlStr));  
+            logger.info("send rs =  "+rs.toString());
+            return rs;
+        } catch (JAXBException e) {  
+            logger.error(e.getMessage(),e);
+        }  
+		return null;
+	}
+	private static String post(String url,String param){
+		 PrintWriter out = null;
+	        BufferedReader in = null;
+	        String result = "";
+	        try {
+	            URL realUrl = new URL(url);
+	            // 打开和URL之间的连接
+	            URLConnection conn = realUrl.openConnection();
+	            // 设置通用的请求属性
+	            conn.setRequestProperty("accept", "*/*");
+	            conn.setRequestProperty("connection", "Keep-Alive");
+	            conn.setRequestProperty("user-agent",
+	                    "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1;SV1)");
+	            // 发送POST请求必须设置如下两行
+	            conn.setDoOutput(true);
+	            conn.setDoInput(true);
+	            // 获取URLConnection对象对应的输出流
+	            out = new PrintWriter(conn.getOutputStream());
+	            // 发送请求参数
+	            out.print(param);
+	            // flush输出流的缓冲
+	            out.flush();
+	            // 定义BufferedReader输入流来读取URL的响应
+	            in = new BufferedReader(
+	                    new InputStreamReader(conn.getInputStream()));
+	            String line;
+	            while ((line = in.readLine()) != null) {
+	                result += line;
+	            }
+	        } catch (Exception e) {
+	        	logger.error("发送 POST 请求出现异常！"+e);
+	        }
+	        //使用finally块来关闭输出流、输入流
+	        finally{
+	            try{
+	                if(out!=null){
+	                    out.close();
+	                }
+	                if(in!=null){
+	                    in.close();
+	                }
+	            }
+	            catch(IOException ex){
+	            	logger.error(ex.getMessage(), ex);
+	            }
+	        }
+	        return result;
+	}
+}

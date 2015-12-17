@@ -1,0 +1,30 @@
+/**
+ * 
+ */
+package com.aepan.sysmgr.model.config;
+
+import java.io.Serializable;
+
+/**
+ * @author Administrator
+ * 2015年9月24日下午4:55:40
+ */
+public class SmsConfig implements Serializable{
+	private static final long serialVersionUID = 1L;
+	
+	public static final int TYPE_验证码 = 0;
+	public static final int TYPE_非验证码 = 1;
+	
+	public String url;
+	public String ac;
+	public String authkey;
+	public String cgid;
+	public String csid;
+	
+	public String oth_url;
+	public String oth_ac;
+	public String oth_authkey;
+	public String oth_cgid;
+	public String oth_csid;
+	
+}

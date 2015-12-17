@@ -1,0 +1,109 @@
+/**
+ * 
+ */
+package com.aepan.sysmgr.util.lucene;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+import net.paoding.analysis.analyzer.PaodingAnalyzer;
+
+import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.document.Document;
+import org.apache.lucene.document.Field;
+import org.apache.lucene.index.CorruptIndexException;
+import org.apache.lucene.index.IndexWriter;
+import org.apache.lucene.index.Term;
+import org.apache.lucene.queryParser.ParseException;
+import org.apache.lucene.queryParser.QueryParser;
+import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.Query;
+import org.apache.lucene.search.ScoreDoc;
+import org.apache.lucene.search.TopScoreDocCollector;
+import org.apache.lucene.util.Version;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.aepan.sysmgr.model.Store;
+import com.aepan.sysmgr.service.ConfigService;
+import com.aepan.sysmgr.util.JSONUtil;
+
+/**
+ * 播放器搜索帮助类
+ * @author lanker
+ * 2015年10月27日上午11:45:53
+ */
+public class SearchHelper {
+	private static final Logger logger = LoggerFactory.getLogger(SearchHelper.class);
+	private static void insert(Store s){
+		if(s==null) return ;
+			Document doc = new Document();
+			doc.add(new Field("ID", s.getId()+"",Field.Store.YES, Field.Index.ANALYZED));
+			doc.add(new Field("NAME", s.getName(),Field.Store.YES, Field.Index.ANALYZED));
+			doc.add(new Field("DESCRIPTION", s.getDescription(),Field.Store.YES, Field.Index.ANALYZED));
+			doc.add(new Field("SHARECONTENT", s.getShareContent(),Field.Store.YES, Field.Index.ANALYZED));
+			doc.add(new Field("MultiFields", s.getName(),Field.Store.YES, Field.Index.ANALYZED));
+			doc.add(new Field("MultiFields", s.getDescription(),Field.Store.YES, Field.Index.ANALYZED));
+            doc.add(new Field("MultiFields", s.getShareContent(),Field.Store.YES, Field.Index.ANALYZED));
+			//insert(doc);
+	}
+	public static void insert(ConfigService configService,Document doc){
+		try {
+            IndexWriter writer = LuceneManager.instance(configService).getIndexWriter();
+            writer.updateDocument(new Term("ID" , doc.get("ID")),doc); 
+            writer.commit();
+            LuceneManager.instance(configService).closeAll();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	public static List<Integer> search(ConfigService configService,String queryString,String field,int pageNo,int hitsPerPage){
+		try {
+			IndexSearcher searcher = new IndexSearcher(LuceneManager.instance(configService).getIndexReader());
+			Analyzer analyzer = new PaodingAnalyzer();
+			QueryParser parser = new QueryParser(Version.LUCENE_33, field, analyzer);
+			Query query = parser.parse(queryString.trim());
+			logger.info("Searching for: " + query.toString(field));
+			TopScoreDocCollector results = TopScoreDocCollector.create(pageNo*hitsPerPage, false);
+			searcher.search(query, results);
+			return toStore(searcher, results, pageNo, hitsPerPage);
+		} catch (CorruptIndexException e) {
+			logger.info("搜索出错，索引异常CorruptIndexException");
+		} catch (IOException e) {
+			logger.info("搜索出错，IO异常IOException");
+		} catch (ParseException e) {
+			logger.info("构建庖丁查询语句出错，可能搜索词为保留关键词or等ParseException");
+		}
+		return new ArrayList<Integer>();
+	}
+	private static List<Integer> toStore(IndexSearcher searcher,TopScoreDocCollector results,int pageNo,int hitsPerPage) throws CorruptIndexException, IOException{
+		List<Integer> slist = new ArrayList<Integer>();
+		ScoreDoc[] hits = results.topDocs((pageNo-1)*hitsPerPage, pageNo*hitsPerPage).scoreDocs;
+        int numTotalHits = results.getTotalHits();
+        logger.info(numTotalHits + " total matching documents");
+        for (int i = 0; i < hits.length; i++) {
+            Document doc = searcher.doc(hits[i].doc);
+            slist.add(Integer.parseInt(doc.get("ID")));
+            logger.info(
+            		"ID:" + doc.get("ID") + 
+            		"\nNAME:" + doc.get("NAME")+
+            		"\nDESCRIPTION:" + doc.get("DESCRIPTION")+
+            		"\nSHARECONTENT:" + doc.get("SHARECONTENT")+
+            		"\nMultiFields:" + doc.get("MultiFields")
+            		);
+        }
+        //searcher.close();
+		return slist;
+	}
+	public static void main(String[] args) {
+		Store s = new Store();
+		s.setId(1);
+		s.setName("山里有个庙 更新 1 更 新 2 更 新 4");
+		s.setDescription("山里有个庙，还有一个小和尚update 更新1");
+		s.setShareContent("山里有个庙，庙里有个和尚 更新1");
+		//insert(s);
+		//List<Integer> slist = search("和尚","MultiFields",1,10);
+	//	System.out.println(JSONUtil.toJson(slist));
+	}
+}

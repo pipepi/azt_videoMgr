@@ -1,0 +1,18 @@
+package com.aepan.sysmgr.model.config;
+
+/**
+ * @author lanker
+ * 2015年8月10日上午11:36:55
+ */
+public class FileConfig {
+	public String IMG_LOCAL_DIR;//图片本地目录
+	public String IMG_AZURE_DIR;//图片微软云目录
+	public String IMG_AZURE_PAY_DIR;//支付图片微软云目录
+	public String IMG_AZURE_PRE;//图片微软云地址前缀
+	public String IM4JAVA_TOOLPATH;//图片裁剪插件地址
+	public String PAY_NOTIFY_URL;
+	public int MAX_VIDEO_SIZE;
+	public int MAX_IMGS_SIZE;
+	public int MAX_IMG_WIDTH;
+	public int MIN_IMG_WIDTH;
+}

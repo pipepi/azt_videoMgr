@@ -1,0 +1,31 @@
+/**
+ * 
+ */
+package com.aepan.sysmgr.web.controller;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.ModelMap;
+import org.springframework.web.bind.annotation.RequestMapping;
+
+import com.aepan.sysmgr.service.ConfigService;
+import com.aepan.sysmgr.util.ConfigManager;
+
+/**
+ * @author lanekr
+ * 2015年8月10日上午11:41:29
+ */
+@Controller
+public class ConfigController extends DataTableController {
+	@Autowired
+	private ConfigService configService;
+	@RequestMapping("/config/init")
+	public String init(HttpServletRequest req,HttpServletResponse res,ModelMap model) throws Exception{
+		ConfigManager.getInstance().getFileConfig(configService);
+		return null;
+	}
+
+}

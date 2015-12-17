@@ -1,0 +1,27 @@
+/**
+ * 
+ */
+package com.aepan.sysmgr.model.config;
+
+import java.io.Serializable;
+
+/**
+ * @author lanker
+ * 2015年10月9日下午4:24:02
+ */
+public class PartnerConfig implements Serializable {
+
+	private static final long serialVersionUID = 1L;
+	public String ROOT_PATH_KAIMAI8;//开卖8根路径，用于关联产品图片展示
+	public String PARTNER_INDEX_URL;//
+	public String GET_PARTNER_PRODUCT_PAGE_URL; 
+	public String GET_PARTNER_PRODUCT_DETAIL_URL;
+	public String GET_PARTNER_PRODUCT_SKUSINFO;
+	public String UPDATE_PRODUCT_STOKE;
+	
+	public String GET_VIDEOAUTH_URL;
+	
+	
+	
+	
+}

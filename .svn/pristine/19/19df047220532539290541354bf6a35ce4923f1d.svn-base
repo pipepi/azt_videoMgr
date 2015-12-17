@@ -1,0 +1,53 @@
+/**
+ * 
+ */
+package com.aepan.sysmgr.service;
+
+import com.aepan.sysmgr.model.packageinfo.PackageFlow;
+import com.aepan.sysmgr.model.packageinfo.PackageStat;
+
+/**
+ * @author Doris.zhou
+ * 2015年9月8日下午3:36:19
+ */
+public interface PackageStatService{
+
+	/**
+	 * @param packageStat
+	 * @return
+	 */
+	boolean save(PackageStat packageStat);
+
+	/**
+	 * @param packageStat
+	 * @return
+	 */
+	boolean update(PackageStat packageStat);
+
+	/**
+	 * @param userId
+	 * @return
+	 */
+	PackageStat getByUserId(int userId);
+
+	/**
+	 * @param userId
+	 * @return
+	 */
+	int getFlowNumByUserId(int userId);
+
+	/**
+	 * @param packageFlow
+	 * @return
+	 */
+	boolean addPackageFlow(PackageFlow packageFlow);
+
+	/**
+	 * @param userId
+	 * @param videoId
+	 * @param isH5
+	 * @return
+	 */
+	boolean addFlowNum(int videoId, boolean isH5);
+
+}

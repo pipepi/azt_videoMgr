@@ -1,0 +1,33 @@
+/**
+ * 
+ */
+package com.aepan.sysmgr.service.implement;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.aepan.sysmgr.dao.ConfigDao;
+import com.aepan.sysmgr.model.config.Config;
+import com.aepan.sysmgr.service.ConfigService;
+
+/**
+ * @author lanker
+ * 2015年8月10日上午11:22:52
+ */
+@Service
+public class ConfigServiceImpl implements ConfigService {
+	@Autowired
+	private ConfigDao configDao;
+	@Override
+	public void add(Config c) throws Exception{
+		configDao.add(c);
+	}
+	@Override
+	public void update(Config c){
+		configDao.update(c);
+	}
+	@Override
+	public Config query(int id){
+		return configDao.query(id);
+	}
+}

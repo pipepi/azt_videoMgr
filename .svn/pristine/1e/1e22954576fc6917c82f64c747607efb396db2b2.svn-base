@@ -1,0 +1,33 @@
+/**
+ * 
+ */
+package com.aepan.sysmgr.dao;
+
+import java.util.List;
+import java.util.Map;
+
+import com._21cn.framework.util.PageList;
+import com.aepan.sysmgr.model.Store;
+
+/**
+ * @author rakika
+ * 2015年8月10日下午4:46:04
+ */
+public interface StoreDao {
+	
+	public PageList<Store> getList(Map<String, Object> params, int pageNo, int pageSize);
+	//获取该用户在线商铺的的列表
+	public List<Store> getOnlineListByUserId(int userId);
+	//获取该用户所有商铺的列表
+	public List<Store> getListByUserId(int userId);
+	
+	public Store getById(int id);
+	//更新店铺状态
+	public boolean updateStatus(int id, int status);
+	//保存
+	public boolean save(Store store);
+	/**修改*/
+	void update(Store store);
+	/**删除*/
+	void delete(int storeId);
+}

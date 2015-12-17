@@ -1,0 +1,490 @@
+/**
+ * 
+ */
+package com.aepan.sysmgr.web.controller;
+
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.locks.ReentrantLock;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.ui.ModelMap;
+import org.springframework.web.bind.annotation.RequestMapping;
+
+import com._21cn.framework.exception.BusinessRuntimeException;
+import com._21cn.framework.util.PageList;
+import com._21cn.framework.web.HttpRequestInfo;
+import com.aepan.sysmgr.common.cache.ParamInfoCache;
+import com.aepan.sysmgr.model.ProductType;
+import com.aepan.sysmgr.model.Store;
+import com.aepan.sysmgr.model.User;
+import com.aepan.sysmgr.model.config.FileConfig;
+import com.aepan.sysmgr.model.lucene.StoreSub;
+import com.aepan.sysmgr.model.packageinfo.PackageInfo;
+import com.aepan.sysmgr.model.packageinfo.PackageStat;
+import com.aepan.sysmgr.service.ConfigService;
+import com.aepan.sysmgr.service.PackageService;
+import com.aepan.sysmgr.service.PackageStatService;
+import com.aepan.sysmgr.service.ProductService;
+import com.aepan.sysmgr.service.ProductTypeService;
+import com.aepan.sysmgr.service.StoreService;
+import com.aepan.sysmgr.service.VideoService;
+import com.aepan.sysmgr.util.AjaxResponseUtil;
+import com.aepan.sysmgr.util.ConfigManager;
+import com.aepan.sysmgr.util.Constants;
+import com.aepan.sysmgr.util.DataTableReturnObject;
+import com.aepan.sysmgr.util.JSONUtil;
+import com.alibaba.fastjson.JSONObject;
+
+/**
+ * 商铺controller
+ * @author rakika
+ * 2015年8月10日下午4:38:16
+ */
+@Controller
+public class StoreController extends DataTableController {
+
+	private static final Logger logger = LoggerFactory.getLogger(StoreController.class);
+	
+	@Autowired
+	StoreService storeService;
+	
+	@Autowired
+	ProductTypeService productTypeService;
+	
+	@Autowired
+	ProductService productService;
+	
+	@Autowired
+	ConfigService configService;
+	@Autowired
+	PackageService packageService;
+	@Autowired
+	PackageStatService packageStatService;
+	@Autowired
+	VideoService videoService;
+	
+	
+	
+	
+	
+	/**
+	 * 获取店铺list
+	 * @param request
+	 * @param response
+	 * @param model
+	 * @return
+	 */
+	@RequestMapping("/store/list")
+	public String list(HttpServletRequest request, HttpServletResponse response, ModelMap model){
+		//判断当前session没有过期
+		if(request.getSession().getAttribute(Constants.SESSION_USER) == null){
+			logger.info("check : session null");
+			return "redirect:/login";
+		}
+		User user = (User) request.getSession().getAttribute(Constants.SESSION_USER);
+		model.addAttribute("userId", user.getId());
+		List<Store> list = storeService.getList(model, 1, 50);
+		model.put("list", list);
+		return "/store/list";
+	}
+	
+	/**
+	 * 搜索店铺
+	 * @param request
+	 * @param response
+	 * @param model
+	 * @return
+	 */
+	@RequestMapping("/store/search")
+	public String search(HttpServletRequest request, HttpServletResponse response, ModelMap model){
+		String [] idKey = new String[]{"", "id", "name", "description", "create_time"};
+    	logger.info("method: role search");
+		setPageSortModel(request, model, idKey);
+		//根据ID拥有者，查询自己的店铺
+		User user = (User) request.getSession().getAttribute(Constants.SESSION_USER);
+		model.addAttribute("userId", user.getId());
+    	PageList<Store> list = storeService.getList(model, Integer.parseInt(model.get("pageNo").toString()), 
+    			                             Integer.parseInt(model.get("pageSize").toString()));
+    	DataTableReturnObject data = new DataTableReturnObject();
+    	data.setResult(list, model.get("sEcho").toString());
+    	AjaxResponseUtil.returnData(response, JSONObject.toJSONString(data));
+		return null;
+	}
+	
+	/**
+	 * 创建店铺
+	 * @param request
+	 * @param response
+	 * @param model
+	 * @return
+	 */
+	@RequestMapping("/store/create")
+	public String create(HttpServletRequest request, HttpServletResponse response, ModelMap model){
+//		PageList<Store> list = storeService.getList(model, 1, Integer.MAX_VALUE);
+//    	model.put("list", list);
+    	Store store = new Store();
+    	model.addAttribute("sysmgrStore", store);
+		return "/store/form";
+	}
+	
+	/**
+	 * 保存店铺信息
+	 * @param request
+	 * @param response
+	 * @param model
+	 * @return
+	 */
+	@RequestMapping("/store/save")
+	public String save(HttpServletRequest request, HttpServletResponse response, ModelMap model){
+		return "redirect:/store/list.do";
+	}
+	
+	/**
+	 * 店铺上线
+	 * @param request
+	 * @param response
+	 * @param model
+	 * @return
+	 */
+	@RequestMapping("/store/online")
+	public String online(HttpServletRequest request, HttpServletResponse response, ModelMap model){
+		HttpRequestInfo reqInfo = new HttpRequestInfo(request);
+        Integer id = reqInfo.getIntParameter("eqId", -1);
+        logger.info("id" + id);
+        if(id != -1){
+        	Store store = storeService.getById(id);
+        	if(store == null){
+        		 throw new BusinessRuntimeException( "error.param.wrong", "无效参数" );
+        	}else{
+        		if(store.getStatus() == 0){
+        			storeService.updateStatus(store.getId(), 1);
+        		}
+        	}
+        }
+		return "redirect:/store/list.do";
+	}
+	
+	/**
+	 * 店铺下线
+	 * @param request
+	 * @param response
+	 * @param model
+	 * @return
+	 */
+	@RequestMapping("/store/offline")
+	public String offline(HttpServletRequest request, HttpServletResponse response, ModelMap model){
+		HttpRequestInfo reqInfo = new HttpRequestInfo(request);
+        Integer id = reqInfo.getIntParameter("eqId", -1);
+        if(id > 0){
+        	Store store = storeService.getById(id);
+        	if(store == null){
+        		 throw new BusinessRuntimeException( "error.param.wrong", "无效参数" );
+        	}else{
+        		if(store.getStatus() == 1){
+        			storeService.updateStatus(store.getId(), 0);
+        		}
+        	}
+        }
+		return "redirect:/store/list.do";
+	}
+
+	
+	/**
+	 * 添加播放器
+	 * @param request
+	 * @param response
+	 * @param model
+	 * @return
+	 */
+	@RequestMapping("/store/addbfq")
+	public String addbfq(HttpServletRequest request, HttpServletResponse response, ModelMap model){
+		List<ProductType> productTypeList = productTypeService.getTypeList(model, 1, Integer.MAX_VALUE);
+		model.addAttribute("ProductType", productTypeList);
+		return "store/addbfq";
+	}
+	@RequestMapping("/store/editStore")
+	public String editStore(HttpServletRequest request, HttpServletResponse response, ModelMap model){
+		HttpRequestInfo reqInfo = new HttpRequestInfo(request);
+		int storeId  = reqInfo.getIntParameter("storeId");
+		if(storeId>0){
+			Store s = storeService.getById(storeId);
+			if(s!=null){
+				s.escapeHtml();
+				model.addAttribute("store", s);
+				List<Integer> storeTypes = new ArrayList<Integer>();
+				String type = s.getType();
+				if(type!=null&&type.length()>0){
+					String[] types = type.split(",");
+					for (String t : types) {
+						storeTypes.add(new Integer(t));
+					}
+				}
+				model.addAttribute("types",storeTypes);
+			}
+		}
+		List<ProductType> productTypeList = productTypeService.getTypeList(model, 1, Integer.MAX_VALUE);
+		model.addAttribute("ProductType", productTypeList);
+		return "store/addbfq";
+	}
+
+	/**
+	 * 播放器列表
+	 * @param request
+	 * @param response
+	 * @param model
+	 * @return
+	 */
+	@RequestMapping("/store/videolist")
+	public String videolist(HttpServletRequest request, HttpServletResponse response, ModelMap model){
+		
+		HttpSession session = request.getSession();
+        User user = (User) session.getAttribute(Constants.SESSION_USER);
+        logger.info("videoSessionId:"+session.getId()+",videolistuser:"+user);
+
+		if(!isLogin(request)){
+			return "redirect:/login";
+		}
+		int userId = user.getId();
+		//查询包含关联商品、视频信息的播放器列表
+		List<Store> slist = storeService.getListHasLinkedIds(userId);
+		model.addAttribute("storelist", slist);
+		int storeVideoCount=0;
+		int storeProductCount=0;
+		for (Store store : slist) {
+			storeVideoCount=storeVideoCount+store.getLinkedVideoNum();
+			storeProductCount= storeProductCount+store.getLinkedProductNum();
+		}
+		
+		
+		FileConfig config = ConfigManager.getInstance().getFileConfig(configService);
+		model.addAttribute("imgpre", config.IMG_AZURE_PRE);
+		int packageId = user.getPackageId();
+		PackageInfo packageInfo = packageService.getById(packageId);
+		PackageStat packageStatInfo = packageStatService.getByUserId(userId);
+		
+		
+		int totalVideoNum = packageInfo.getPlayerNum()*packageInfo.getVideoNum();
+		int totalProductNum = packageInfo.getPlayerNum()*packageInfo.getProductNum();
+
+//		int storeVideoCount = videoService.getStoreVideoCountByUserId(userId);
+		
+		int totalFlowNum = packageStatService.getFlowNumByUserId(userId);
+		
+		
+		 SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss"); 
+		 String packageEndTime = sdf.format(packageStatInfo.getEndTime());  
+		
+		int playerCount = slist.size();
+		int packagePlayerNum = packageInfo.getPlayerNum();
+		int canAddPlayerNum = packagePlayerNum-playerCount;
+		model.addAttribute("canAddPlayerNum",canAddPlayerNum);
+		model.addAttribute("packagePlayerNum",packagePlayerNum);
+		model.addAttribute("playerCount",playerCount);
+		model.addAttribute("packageInfo",packageInfo);
+		model.addAttribute("packageStatInfo", packageStatInfo);
+		
+		model.addAttribute("storeVideoCount", storeVideoCount);
+		model.addAttribute("totalVideoNum", totalVideoNum);
+		
+		
+		model.addAttribute("storeProductCount", storeProductCount);
+		model.addAttribute("totalProductNum", totalProductNum);
+		
+		
+		model.addAttribute("totalFlowNum", totalFlowNum*1024);
+		int flowNum = Math.round(packageStatInfo.getFlowNum()/1024);
+		model.addAttribute("usedFlowNum", flowNum);
+		
+//		float usedFlowNum = videoService.getUsedFlowNumByUserId(userId);
+		
+		float flowUseRate = flowNum/(float)(totalFlowNum*1024);
+		int flowUseRateInt=Math.round(flowUseRate*100);
+		if(flowUseRateInt>100){
+			flowUseRateInt=100;
+		}
+		model.addAttribute("flowUseRate",100-flowUseRateInt);
+		
+		model.addAttribute("packageEndTime",packageEndTime);
+		
+		
+		
+		return "store/bfqlist";
+	}
+	
+	
+	
+	/**
+	 * 
+	 * @param request
+	 * @param response
+	 * @param model
+	 * @return
+	 */
+	@RequestMapping("/store/videoOffLine")
+	public String videoOffLine(HttpServletRequest request, HttpServletResponse response, ModelMap model){
+		HttpRequestInfo reqInfo = new HttpRequestInfo(request);
+        Integer id = reqInfo.getIntParameter("eqId", -1);
+        if(id > 0){
+        	Store store = storeService.getById(id);
+        	if(store == null){
+        		 throw new BusinessRuntimeException( "error.param.wrong", "无效参数" );
+        	}else{
+        		if(store.getStatus() == 1){
+        			storeService.updateStatus(store.getId(), 0);
+        		}
+        	}
+        }
+		return "redirect:/store/videolist.do";
+	}
+	
+	/**
+	 * 
+	 * @param request
+	 * @param response
+	 * @param model
+	 * @return
+	 */
+	@RequestMapping("/store/videoOnLine")
+	public String videoOnLine(HttpServletRequest request, HttpServletResponse response, ModelMap model){
+		HttpRequestInfo reqInfo = new HttpRequestInfo(request);
+        Integer id = reqInfo.getIntParameter("eqId", -1);
+        logger.info("id" + id);
+        if(id != -1){
+        	Store store = storeService.getById(id);
+        	if(store == null){
+        		 throw new BusinessRuntimeException( "error.param.wrong", "无效参数" );
+        	}else{
+        		if(store.getStatus() == 0){
+        			storeService.updateStatus(store.getId(), 1);
+        		}
+        	}
+        }
+		return "redirect:/store/videolist.do";
+	}
+	
+	/**
+	 * 保存播放器
+	 * @param request
+	 * @param response
+	 * @param model
+	 * @return
+	 */
+	@RequestMapping("/store/savebfq")
+	@Transactional(rollbackFor=Exception.class)
+	public String savebfq(HttpServletRequest request, HttpServletResponse response, ModelMap model){
+	
+		if(!isLogin(request)){
+			model.addAttribute("success", false);
+			AjaxResponseUtil.returnData(response, JSONObject.toJSONString(model));
+			return null;
+		}
+		User user = (User) request.getSession().getAttribute(Constants.SESSION_USER);
+		int packageId = user.getPackageId();
+		int userId=user.getId();
+		
+		PackageInfo packageInfo = packageService.getById(packageId);
+		
+		ReentrantLock lock = ParamInfoCache.controllerLockMap.get(ParamInfoCache.LOCK_SAVE_PLAYER);
+		lock.lock();
+		try {
+			
+			List<Store> storeList = storeService.getListByUserId(userId);
+			
+			if(packageInfo.getPlayerNum()<=storeList.size()){
+				model.addAttribute("success", false);
+				model.addAttribute("message", "player num arrive max value.");
+				AjaxResponseUtil.returnData(response, JSONObject.toJSONString(model));
+				return null;
+			}
+			
+			HttpRequestInfo reqInfo = new HttpRequestInfo(request);
+			Store store = new Store();
+			store.setName(reqInfo.getParameter("name"));
+			store.setDescription(reqInfo.getParameter("description"));
+			store.setShareContent(reqInfo.getParameter("shareContent"));
+			store.setInnerCode(reqInfo.getParameter("innerCode"));
+			String type = reqInfo.getParameter("type");
+			store.setType(type);
+			store.setPrivateDns(reqInfo.getParameter("privateDns"));
+			store.setComAddress(reqInfo.getParameter("comAddress"));
+			store.setComTele(reqInfo.getParameter("comTele"));
+			store.setUserId(user.getId());
+			storeService.save(store);
+		} catch (Exception e) {
+			logger.error(e.getMessage(),e);
+		}finally{
+			lock.unlock();
+		}
+		model.addAttribute("success", true);
+		AjaxResponseUtil.returnData(response, JSONObject.toJSONString(model));
+		return null;
+	}
+	
+	@RequestMapping("/store/updatebfq")
+	public String updateBfq(HttpServletRequest request, HttpServletResponse response, ModelMap model){
+		HttpRequestInfo reqInfo = new HttpRequestInfo(request);
+		Store store = new Store();
+		store.setId(Integer.parseInt(reqInfo.getParameter("id")));
+		store.setName(reqInfo.getParameter("name"));
+		store.setDescription(reqInfo.getParameter("description"));
+		store.setShareContent(reqInfo.getParameter("shareContent"));
+		store.setInnerCode(reqInfo.getParameter("innerCode"));
+		String type = reqInfo.getParameter("type");
+		store.setType(type);
+		store.setPrivateDns(reqInfo.getParameter("privateDns"));
+		store.setComAddress(reqInfo.getParameter("comAddress"));
+		store.setComTele(reqInfo.getParameter("comTele"));
+		User user = (User) request.getSession().getAttribute(Constants.SESSION_USER);
+		if(user != null){
+			storeService.update(configService,store);
+			model.addAttribute("success", true);
+		}else{
+			model.addAttribute("success", false);
+		}
+		AjaxResponseUtil.returnData(response, JSONObject.toJSONString(model));
+		return null;
+	}
+	
+	
+	@RequestMapping("/store/deletestore")
+	@Transactional(rollbackFor=Exception.class)
+	public String delete(HttpServletRequest request, HttpServletResponse response, ModelMap model){
+		if(!isLogin(request)){
+			return "redirect:/login";
+		}
+		User user = (User)request.getSession().getAttribute(Constants.SESSION_USER);
+		HttpRequestInfo reqInfo = new HttpRequestInfo(request);
+		Integer storeId = reqInfo.getIntParameter("storeId", -1);
+		if(storeId>0){
+			storeService.delete(storeId, user.getId());
+		}
+		return "redirect:/store/videolist";
+	}
+	@RequestMapping("/store/searchbylucene")
+	public String searchByLucene(HttpServletRequest request, HttpServletResponse response, ModelMap model){
+		HttpRequestInfo reqInfo = new HttpRequestInfo(request);
+		String k = reqInfo.getParameter("searchWord");
+		String pageNo = reqInfo.getParameter("pageNo");
+		String pageSize = reqInfo.getParameter("pageSize");
+		int pn = pageNo==null?1:Integer.parseInt(pageNo);
+		int ps = pageSize==null?10:Integer.parseInt(pageSize);
+		List<StoreSub> list = Store.searchLucene(configService,k, pn, ps);
+		AjaxResponseUtil.returnData(response, JSONUtil.toJson(list));
+		return null;
+	}
+	@RequestMapping("/store/searchpage")
+	public String searchByLucenePage(HttpServletRequest request, HttpServletResponse response, ModelMap model){
+		return "/store/search";
+	}
+	
+}

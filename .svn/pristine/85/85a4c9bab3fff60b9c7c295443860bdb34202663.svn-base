@@ -1,0 +1,25 @@
+/**
+ * 
+ */
+package com.aepan.sysmgr.task;
+
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.aepan.sysmgr.service.ConfigService;
+import com.aepan.sysmgr.util.ConfigManager;
+
+/**
+ * 每五分钟重新加载配置
+ * @author lanker
+ * 2015年9月12日下午2:00:48
+ */
+public class ConfigReloadJob implements Runnable{
+	@Autowired
+	private ConfigService configService;
+	@Override
+	public void run() {
+		//ConfigManager.getInstance().fileConfig = null;
+		ConfigManager.getInstance().getFileConfig(configService);
+	}
+	
+}

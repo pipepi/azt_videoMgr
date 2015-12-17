@@ -1,0 +1,31 @@
+/**
+ * 
+ */
+package com.aepan.sysmgr.model.config;
+
+import java.io.Serializable;
+
+/**
+ * @author Doris.zhou
+ * 2015年11月24日下午4:04:25
+ */
+public class AzureConfig implements Serializable{
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	
+	public String storageAccount="pic9cooo";
+	public String storeKey="xEz4/e6bwkzNxTiga+mv1AVXwikZEsD56lYCm216z7+KaCvtxmqV7PMc51G9oRaXnBa4uFh/tv6Sqi8XVtZ43A==";
+	
+	
+	public String blobEndpoint ="https://pic9cooo.blob.core.chinacloudapi.cn/";
+	public String queueEndpoint = "https://pic9cooo.queue.core.chinacloudapi.cn/";
+	public String tableEndpoint = "https://pic9cooo.table.core.chinacloudapi.cn/";
+	
+	
+	public String mediaAccount="video9cooo";
+	public String mediaKey="Gs5S6xkFnLhFsIKV0X/lRgyfOUc5A6qPDAiFd0I9wK8=";
+	
+}

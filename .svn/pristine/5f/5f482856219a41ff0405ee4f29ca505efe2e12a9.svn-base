@@ -1,0 +1,49 @@
+<html>
+<head>
+	<title>player.php</title>
+	<script type="text/javascript">
+
+		function getQueryString(name) { 
+			var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)", "i"); 
+			var r = window.location.search.substr(1).match(reg); 
+			if (r != null) return unescape(r[2]); return null; 
+		} 
+
+		function IsPC() 
+		{ 
+			var userAgentInfo = navigator.userAgent; 
+			var Agents = new Array("Android", "iPhone", "SymbianOS", "Windows Phone", "iPad", "iPod"); 
+			var flag = true; 
+			for (var v = 0; v < Agents.length; v++) { 
+				if (userAgentInfo.indexOf(Agents[v]) > 0) 
+				{
+				 	flag = false; 
+				 	break; 
+				} 
+			} 
+			return flag; 
+		}
+	</script>
+
+	<?php
+		header("Last-Modified: " . gmdate( "D, d M Y H:i:s" ) . "GMT" );  
+		header("Cache-Control: no-cache, must-revalidate" );  
+	?>
+</head>
+<body>
+	<script type="text/javascript">
+		var storeId = getQueryString("storeId");
+		var flag = IsPC();
+		if(flag)
+		{
+			window.location="http://video.kaimai8.com/source/swf/YPPlayer.swf?storeId="+storeId;
+		}else
+		{
+			window.location="http://app-9cooo-001.chinacloudapp.cn:8081/aztsay-h5/index.html?storeId="+storeId;
+		}
+	</script>
+		
+	
+</body>
+
+</html>

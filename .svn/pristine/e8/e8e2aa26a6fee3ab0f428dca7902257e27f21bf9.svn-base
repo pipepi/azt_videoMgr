@@ -1,0 +1,280 @@
+/**
+ * lanker
+ * 2015-08-04
+ */
+var startTime;
+var $ = jQuery;
+var v = {
+		options:{
+			upurl_video:ctx+'/video/upvid',//视频上传接口地址
+			up_video_file_input_id:'up_video',//视频上传页面input标签id
+			uploaded_video_div_id:'uploaded_video',//已上传视频展示框
+			delurl_video:ctx+'/video/remove',//删除视频接口
+			big_img_cover:ctx+'/video/upimgcover',//上传图片接口
+			big_img_input_id:'up_big_img',//上传选择文件input
+			cover_img_big:'cover_img_big',//被裁剪图img标签id
+			cover_div_small:'cover_div_small',//裁剪预览小框
+			hidden_cover_img_small:'hidden_cover_img_small',//裁剪预览小图下面被遮挡的图
+			cuted_img:'cuted_img',
+			x1:0,
+			y1:0,
+			x2:0,
+			y2:0,
+			src_img_id:'',
+			width:0,
+			height:0,
+			scale:1,
+			small_size:120,//预览图高宽
+			big_size:300,//被裁剪图高宽
+			img_cut:ctx+'/video/cutimg',//图片裁剪接口
+			cut_img_id:'',//裁剪后的图片Id
+			cutnum:0,//裁剪次数，用于更新同名图片
+			oldSrcImgId:'',
+			oldCutImgId:''
+			
+		},
+		upload:{
+			video:function(){
+				var myDate = new Date();
+				startTime = myDate.getTime();
+				$("#progress").show();
+				window.setTimeout("v.getProgressBar()", 1500);
+				$.ajaxFileUpload({
+					url:v.options.upurl_video,
+					secureuri:false,
+					fileElementId:v.options.up_video_file_input_id,
+					dataType:'string',
+					success:function(data,status){
+						if(data){
+						  var datas = data.substring(data.indexOf('{')+1,data.lastIndexOf('}'));
+			    		  datas = "{" + datas + "}";
+			    		  var attr = eval('('+datas+')');
+			    		  if(attr.success == true){
+			    			  var videodiv = $('#'+v.options.uploaded_video_div_id);
+			    			  $("<input type='button' onclick='javascript:v.del(this);'  value = '"+attr.name+"   删除' upload_asset_id = '"+attr.uploadAssetId+"' encode_asset_id = '"+attr.encodeAssetId+"' video_name = '"+attr.url+"'></input>").appendTo(videodiv);
+			    			  videodiv.show();
+			    			  $('#'+v.options.up_video_file_input_id).attr("disabled",true);
+			    			  $('input[name="video_id"]').val(attr.url);
+			    			  $('input[name="upload_asset_id"]').val(attr.uploadAssetId);
+			    			  $('input[name="encode_asset_id"]').val(attr.encodeAssetId);
+			    			  //alert("上传成功"+data);
+			    		  }else{
+			    			  alert("上传失败");
+			    		  }
+						}else{
+							alert("上传失败");
+						}
+					},
+					error:function(data,status,e){
+						alert("上传失败"+data);
+					}
+				});
+			},
+			img_cover:function(){
+				var data = "?oldSrcImgId="+v.options.oldSrcImgId+"&oldCutImgId="+v.options.oldCutImgId;
+				$.ajaxFileUpload({
+					url:v.options.big_img_cover+data,
+					secureuri:false,
+					fileElementId:v.options.big_img_input_id,
+					dataType:'string',
+					success: function (data, status){     
+				    	  if(data){
+				    		  //console.log(data);
+				    		  var datas = data.substring(data.indexOf('{')+1,data.lastIndexOf('}'));
+				    		  datas = "{" + datas + "}";
+				    		  var attr = eval('('+datas+')');
+				    		  if(attr.status==0){
+				    			  //根据被裁剪图高宽计算缩放比
+				    			  var scale = 1;
+					    		  if(attr.width>attr.height) {
+					    			  scale = v.options.big_size / (attr.width || 1);
+					    		  } else {
+					    			  scale = v.options.big_size / (attr.height || 1);
+					    		  }
+					    		  v.options.scale = scale;
+					    		  var width = attr.width * scale;
+					    		  var height = attr.height * scale;
+					    		  v.options.width = attr.width;
+					    		  v.options.height = attr.height;
+					    		  v.options.src_img_id = attr.imageId;
+					    		  v.options.oldSrcImgId = attr.imageId;
+					    		  $('input[name="src_img_id"]').val(v.options.src_img_id);
+					    		  
+					    		  //var imgurl = "file:\/\/\/"+attr.imageUrl.replace(new RegExp("\\\\","gm"),"\/");
+					    		  var imgurl = "downimg?img_url="+attr.imageId;
+					    		  console.log(imgurl+"    width="+width+"  height="+height);
+					    		  //显示被裁剪图
+					    		  $('#'+v.options.cover_img_big).attr('src',imgurl);
+					    		  $('#'+v.options.cover_img_big).attr('width', width);
+					    		  $('#'+v.options.cover_img_big).attr('height', height);
+					    		  $(function () {
+					    			  $('#'+v.options.cover_div_small).empty();
+					    			  $('#'+v.options.cover_div_small).append($('<div><img id="'+v.options.hidden_cover_img_small+'" src="'+imgurl+'" style="position: relative;width:'+width+'px;height:'+height+'px;" /></div>')
+				    		          .css({
+				    		              float: 'center',
+				    		              position: 'relative',
+				    		              overflow: 'hidden',
+				    		              width: v.options.small_size+'px',
+				    		              height: v.options.small_size+'px'
+				    		          }));
+					    			  var x1=0;
+					    			  var y1=0;
+					    			  var x2 = width<v.options.small_size?width:v.options.small_size;
+					    		      var y2 = height<v.options.small_size?height:v.options.small_size;
+					    		      console.log("x2="+x2+"   y2="+y2);
+					    		      $('#'+v.options.cover_img_big).imgAreaSelect({ x1: 0, y1: 0, x2: x2, y2: y2, aspectRatio: '1:1', handles:true, onSelectChange: v.preview, onSelectEnd: v.next});
+					    		  });
+				    		  }else{
+				    		  }
+				    	  }
+					},
+					error: function (data, status, e){
+				    	  alert("请求错误，原因：" + data);
+				    }
+				});
+			},
+			img_cut:function(){
+				if(v.options.src_img_id==''){
+					alert("请选择需要上传的图片");
+					return;
+				}
+				var data = "?" +
+							"x1="+v.options.x1
+							+"&y1="+v.options.y1
+							+"&x2="+v.options.x2
+							+"&y2="+v.options.y2
+							+"&srcImageId="+v.options.src_img_id
+							+"&scale="+v.options.scale;
+				$.ajaxFileUpload({
+				      url:v.options.img_cut+data,//需要链接到服务器地址
+				      secureuri:false,
+				      fileElementId:v.options.big_img_input_id,//文件选择框的id属性
+				      data:data,
+				      dataType: 'string',//服务器返回的格式，可以是json
+				      success: function (data, status){
+				    	  var datas = data.substring(data.indexOf('{')+1,data.lastIndexOf('}'));
+			    		  datas = "{" + datas + "}";
+			    		  var attr = eval('('+datas+')');
+			    		  console.log(datas);
+				    	  if(attr.status==0){
+				    		  v.options.cut_img_id = attr.cutImgId;
+				    		  v.options.oldCutImgId = attr.cutImgId;
+				    		  $('input[name="cut_img_id"]').val(v.options.cut_img_id);
+				    		  //显示裁剪后的图片
+				    		  $('#'+v.options.cuted_img).attr("src","downimg?img_url="+v.options.cut_img_id+"&cutnum="+(++v.options.cutnum));
+				    		  $('#'+v.options.cuted_img).show();
+				    		  alert("裁剪成功");
+				    	  }else{
+				    		  alert("裁剪失败");
+				    	  }
+				      },
+				      error: function (data, status, e){
+				      }
+				});
+			}
+		},
+		preview:function(img, selection) {
+		    if (!selection.width || !selection.height)
+		        return;
+		    var scaleX = v.options.small_size/selection.width;
+		    var scaleY = v.options.small_size/selection.height;
+		    var width = v.options.scale * v.options.width * scaleX;
+		    var height = v.options.scale * v.options.height * scaleY;
+		    console.log("scaleX="+scaleX+"  scaleY="+scaleY+"   width="+width+"  height="+height);
+		    $('#'+v.options.hidden_cover_img_small).css({
+		        width: Math.round(width) + 'px',
+		        height: Math.round(height) + 'px',
+		        marginLeft: '-' + Math.round(scaleX * selection.x1) + 'px',
+		        marginTop: '-' + Math.round(scaleY * selection.y1) + 'px'
+		    });
+		},
+		next:function(img, selection) {
+		    v.options.x1=selection.x1;
+		    v.options.y1=selection.y1;
+		    v.options.x2=selection.x2;
+		    v.options.y2=selection.y2;
+		},
+		del:function(obj){
+			var del_url = $(obj).attr("video_name");
+			var upload_asset_id = $(obj).attr("upload_asset_id");
+			var encode_asset_id = $(obj).attr("encode_asset_id");
+			alert(del_url);
+			$.ajax({
+				type: "POST",
+				url: v.options.delurl_video,
+				data: {"video_url":del_url,"upload_asset_id":upload_asset_id,"encode_asset_id":encode_asset_id},
+				dataType:"json",
+				success: function(data){
+					var videodiv = $('#'+v.options.uploaded_video_div_id);
+					videodiv.empty();
+					videodiv.toggle();
+					$('#'+v.options.up_video_file_input_id).attr("disabled",false);
+				},
+				error : function (XMLHttpRequest, textStatus) {
+					alert("请求服务器失败,请刷新页面后再重试");
+				}
+			});
+		},
+		submit_all:function(){
+			
+		},
+		getProgressBar:function(){
+			var timestamp = (new Date()).valueOf();
+			var bytesReadToShow = 0;
+			var contentLengthToShow = 0;
+			var bytesReadGtMB = 0;
+			var contentLengthGtMB = 0;
+			$.post(ctx+"/video/progress", {"t":timestamp}, function (data) {
+				var datas = data.substring(data.indexOf('{')+1,data.lastIndexOf('}'));
+	    		  datas = "{" + datas + "}";
+	    		  var json = eval('('+datas+')');
+				console.log(json);
+				var bytesRead = (json.pBytesRead / 1024).toString();
+				if (bytesRead > 1024) {
+					bytesReadToShow = (bytesRead / 1024).toString();
+					bytesReadGtMB = 1;
+				}else{
+					bytesReadToShow = bytesRead.toString();
+				}
+				var contentLength = (json.pContentLength / 1024).toString();
+				if (contentLength > 1024) {
+					contentLengthToShow = (contentLength / 1024).toString();
+					contentLengthGtMB = 1;
+				}else{
+					contentLengthToShow= contentLength.toString();
+				}
+				bytesReadToShow = bytesReadToShow.substring(0, bytesReadToShow.lastIndexOf(".") + 3);
+				contentLengthToShow = contentLengthToShow.substring(0, contentLengthToShow.lastIndexOf(".") + 3);
+				if (contentLength>0&&bytesRead == contentLength) {
+					$("#close").show();
+					$("#uploaded").css("width", "300px");
+					if (contentLengthGtMB == 0) {
+						$("div#info").html("\u4e0a\u4f20\u5b8c\u6210\uff01\u603b\u5171\u5927\u5c0f" + contentLengthToShow + "KB.\u5b8c\u6210100%");
+					} else {
+						$("div#info").html("\u4e0a\u4f20\u5b8c\u6210\uff01\u603b\u5171\u5927\u5c0f" + contentLengthToShow + "MB.\u5b8c\u6210100%");
+					}
+					window.clearTimeout(interval);
+					$("#subButton").attr("disabled", false);
+				} else {
+					var pastTimeBySec = (new Date().getTime() - startTime) / 1000;
+					var sp = (bytesRead / pastTimeBySec).toString();
+					var speed = sp.substring(0, sp.lastIndexOf(".") + 3);
+					var percent = Math.floor((bytesRead / contentLength) * 100) + "%";
+					$("#uploaded").css("width", percent);
+					if (bytesReadGtMB == 0 && contentLengthGtMB == 0) {
+						$("div#info").html("\u4e0a\u4f20\u901f\u5ea6:" + speed + "KB/Sec,\u5df2\u7ecf\u8bfb\u53d6" + bytesReadToShow + "KB,\u603b\u5171\u5927\u5c0f" + contentLengthToShow + "KB.\u5b8c\u6210" + percent);
+					} else {
+						if (bytesReadGtMB == 0 && contentLengthGtMB == 1) {
+							$("div#info").html("\u4e0a\u4f20\u901f\u5ea6:" + speed + "KB/Sec,\u5df2\u7ecf\u8bfb\u53d6" + bytesReadToShow + "KB,\u603b\u5171\u5927\u5c0f" + contentLengthToShow + "MB.\u5b8c\u6210" + percent);
+						} else {
+							if (bytesReadGtMB == 1 && contentLengthGtMB == 1) {
+								$("div#info").html("\u4e0a\u4f20\u901f\u5ea6:" + speed + "KB/Sec,\u5df2\u7ecf\u8bfb\u53d6" + bytesReadToShow + "MB,\u603b\u5171\u5927\u5c0f" + contentLengthToShow + "MB.\u5b8c\u6210" + percent);
+							}
+						}
+					}
+				}
+			});
+			var interval = window.setTimeout("v.getProgressBar()", 1000);
+		}
+		
+}

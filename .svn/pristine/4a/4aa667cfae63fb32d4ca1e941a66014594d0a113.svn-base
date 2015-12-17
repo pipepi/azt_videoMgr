@@ -1,0 +1,26 @@
+/**
+ * 
+ */
+package com.aepan.sysmgr.model.config;
+
+import java.io.Serializable;
+
+/**
+ * @author lanker
+ * 2015年9月26日上午11:54:30
+ */
+public class EmailConfig implements Serializable {
+
+	private static final long serialVersionUID = 1L;
+	
+	public String url;
+	public String apiKey;
+	public String apiUser;
+	public String from;
+	public String fromname;
+	@Override
+	public String toString() {
+		return "EmailConfig [url=" + url + ", apiKey=" + apiKey + ", apiUser="
+				+ apiUser + ", from=" + from + ", fromname=" + fromname + "]";
+	}
+}

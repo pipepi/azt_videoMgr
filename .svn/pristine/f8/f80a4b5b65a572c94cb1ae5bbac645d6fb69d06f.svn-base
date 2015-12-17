@@ -1,0 +1,137 @@
+/**
+ * 
+ */
+package com.aepan.sysmgr.dao.implement;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Repository;
+
+import com.aepan.sysmgr.dao.PackageStatDao;
+import com.aepan.sysmgr.dao.rowmapper.PackageStatRowMapper;
+import com.aepan.sysmgr.model.packageinfo.PackageFlow;
+import com.aepan.sysmgr.model.packageinfo.PackageStat;
+
+/**
+ * 
+ * @author Doris
+ * 2015年9月8日下午3:43:34
+ */
+@Repository
+public class PackageStatDaoImpl implements PackageStatDao {
+
+	@Autowired
+    private JdbcTemplate jdbcTemplate;
+
+	@Override
+	public boolean save(PackageStat packageStat) {
+		StringBuffer sb = new StringBuffer(" insert into t_sysmgr_package_stat(user_id,"
+				+ "package_id,player_num,video_num,product_num,flow_num,duration,send_notify,start_time,end_time,create_time,update_time) values( ?,?,?,?,?,?,?,?,?,?,now(),now())");
+
+		int ret = jdbcTemplate.update(sb.toString(), new Object[]{
+			packageStat.getUserId(),
+			packageStat.getPackageId(),
+			packageStat.getPlayerNum(),
+			packageStat.getVideoNum(),
+			packageStat.getProductNum(),
+			packageStat.getFlowNum(),
+			packageStat.getDuration(),
+			packageStat.getSendNotify(),
+			packageStat.getStartime(),
+			packageStat.getEndTime()
+		});
+		return ret > 0;
+	}
+	
+
+	@Override
+	public boolean update(PackageStat packageStat) {
+		StringBuffer sb = new StringBuffer(" update t_sysmgr_package_stat set package_id=?,"
+				+ " player_num=?,video_num=?,product_num=?,duration=?,send_notify=?,senstart_time=?,end_time=?,update_time=now() where user_id = ? ");
+
+		int ret = jdbcTemplate.update(sb.toString(), new Object[]{
+			packageStat.getPackageId(),
+			packageStat.getPlayerNum(),
+			packageStat.getVideoNum(),
+			packageStat.getProductNum(),
+			packageStat.getDuration(),
+			packageStat.getSendNotify(),
+			packageStat.getStartime(),
+			packageStat.getEndTime(),
+			packageStat.getUserId()
+		});
+		return ret > 0;
+	}
+	
+	
+	@Override
+	public boolean addFlowNum(int videoId,boolean isH5){
+		String sql="update t_sysmgr_package_stat s  join(select video_size,user_id from t_sysmgr_video where id=? ) v on( s.user_id=v.user_id) set s.flow_num=s.flow_num+v.video_size";
+		if(isH5){
+			sql="update t_sysmgr_package_stat s  join(select h5_video_size,user_id from t_sysmgr_video where id=? ) v on( s.user_id=v.user_id) set s.flow_num=s.flow_num+v.h5_video_size";
+		}
+		
+		int ret=jdbcTemplate.update(sql, new Object[]{videoId});
+		
+		return ret>0;
+	}
+	
+	
+
+	
+	@Override
+	public PackageStat getByUserId(int userId) {
+		
+		String sql = "select * from t_sysmgr_package_stat where user_id=?";
+		
+		
+		List<PackageStat> packageStatList = jdbcTemplate.query(sql, new Object[] {userId},new PackageStatRowMapper());
+		 
+		 if(packageStatList.size()>=1){
+			 return packageStatList.get(0);
+		 }
+		 return null;
+		
+	}
+	
+	
+	public List<PackageStat> queryLessThan30PackageStat(){
+		String sql = "SELECT * FROM videomgr.t_sysmgr_package_stat  where send_notify=0 and date_add(end_time,interval -30 day)<now()";
+		return jdbcTemplate.queryForList(sql, new Object[]{}, PackageStat.class);
+	}
+	
+	
+	
+	
+	@Override
+	public boolean addPackageFlow(PackageFlow packageFlow) {
+		StringBuffer sb = new StringBuffer(" insert into t_sysmgr_flow(user_id,"
+				+ "flow_num,start_time,end_time,create_time,update_time) values( ?,?,?,?,now(),now())");
+
+		int ret = jdbcTemplate.update(sb.toString(), new Object[]{
+			packageFlow.getUserId(),
+			packageFlow.getFlowNum(),
+			packageFlow.getStartTime(),
+			packageFlow.getEndTime(),
+		});
+		return ret > 0;
+	}
+	
+	@Override
+	public int getFlowNumByUserId(int userId) {
+		
+		String sql = "select sum(flow_num) from t_sysmgr_flow where user_id=? ";
+		
+		Integer flowNum = jdbcTemplate.queryForObject(sql, new Object[] {userId},Integer.class);
+		if(flowNum==null){
+			flowNum=0;
+		}
+		return  flowNum;
+		
+	}
+	
+	
+	 
+}

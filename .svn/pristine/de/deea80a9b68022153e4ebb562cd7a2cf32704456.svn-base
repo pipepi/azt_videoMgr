@@ -1,0 +1,273 @@
+/**
+ * 
+ */
+package com.aepan.sysmgr.service.implement;
+
+import java.util.List;
+import java.util.Map;
+
+import org.apache.lucene.document.Document;
+import org.apache.lucene.document.Field;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+
+import com._21cn.framework.util.PageList;
+import com.aepan.sysmgr.dao.PackageStatDao;
+import com.aepan.sysmgr.dao.ProductDao;
+import com.aepan.sysmgr.dao.StoreDao;
+import com.aepan.sysmgr.dao.VideoDao;
+import com.aepan.sysmgr.model.ProductInfo;
+import com.aepan.sysmgr.model.Store;
+import com.aepan.sysmgr.model.StoreProduct;
+import com.aepan.sysmgr.model.StoreProducts;
+import com.aepan.sysmgr.model.StoreVideo;
+import com.aepan.sysmgr.model.Video;
+import com.aepan.sysmgr.model.packageinfo.PackageStat;
+import com.aepan.sysmgr.service.ConfigService;
+import com.aepan.sysmgr.service.StoreService;
+import com.aepan.sysmgr.util.lucene.SearchHelper;
+
+/**
+ * @author rakika
+ * 2015年8月10日下午5:15:54
+ */
+@Controller
+public class StoreServiceImpl implements StoreService {
+
+	@Autowired
+	StoreDao storeDao;
+	@Autowired
+	VideoDao videoDao;
+	@Autowired
+	ProductDao productDao;
+	@Autowired
+	private PackageStatDao packageStatDao;
+	
+	/* (non-Javadoc)
+	 * @see com._aepan.sysmgr.service.StoreService#getList(java.util.Map, int, int)
+	 */
+	@Override
+	public PageList<Store> getList(Map<String, Object> params, int pageNo,
+			int pageSize) {
+		// TODO Auto-generated method stub
+		PageList<Store> list = storeDao.getList(params, pageNo, pageSize); 
+		//setStoreLogo(list);
+		return list;
+	}
+	/**用播放器关联的第一个视频小图作为播放器的logo*/
+	/*private void setStoreLogo(List<Store> list){
+		if(list!=null&&!list.isEmpty()){
+			for (Store store : list) {
+				List<StoreVideo>  svList = videoDao.getStoreVideoList(store.getUserId(), store.getId());
+				if(svList!=null&&svList.size()>0){
+					int videoId = svList.get(0).getVideoId();
+					if(videoId>0){
+						Video v = videoDao.findVideoById(videoId); 
+						if(v!=null){
+							store.setLogoUrl(v.getImgMin());
+						}
+					}
+				}
+			}
+		}
+	}*/
+	/* (non-Javadoc)
+	 * @see com._aepan.sysmgr.service.StoreService#getOnlineListByUserId(int)
+	 */
+	@Override
+	public List<Store> getOnlineListByUserId(int userId) {
+		return storeDao.getOnlineListByUserId(userId);
+	}
+
+	/* (non-Javadoc)
+	 * @see com._aepan.sysmgr.service.StoreService#getById(int)
+	 */
+	@Override
+	public Store getById(int id) {
+		// TODO Auto-generated method stub
+		Store s = storeDao.getById(id);
+		//设置已关联产品和视频数量，用于编辑视频页面判断是否显示内嵌码
+		setLinkMsg(s);
+		return s;
+	}
+	
+	private void setLinkMsg(Store s){
+		if(s!=null){
+			//关联视频
+			List<StoreVideo> svlist = videoDao.getStoreVideoList(s.getUserId(), s.getId());
+			if(svlist!=null){
+				s.setLinkedVideoNum(svlist.size());
+				String lvids = "";
+				if(svlist.size()>0){
+					for (StoreVideo sv : svlist) {
+						lvids+= sv.videoId+",";
+					}
+					lvids = lvids.substring(0,lvids.length()-1);
+				}
+				s.linkedVideoIds = lvids;
+			}
+			//关联产品
+			List<StoreProduct> splist = productDao.getStoreProductList(s.getUserId(), s.getId());
+			if(splist!=null){
+				s.setLinkedProductNum(splist.size());
+				String lpids = "";
+				if(splist.size()>0){
+					for (StoreProduct sp : splist) {
+						lpids+= sp.productId+",";
+					}
+					lpids = lpids.substring(0,lpids.length()-1);
+				}
+				s.linkedProductIds = lpids;
+			}
+		}
+	}
+	/* (non-Javadoc)
+	 * @see com._aepan.sysmgr.service.StoreService#updateStatus(int, int)
+	 */
+	@Override
+	public boolean updateStatus(int id, int status) {
+		// TODO Auto-generated method stub
+		return storeDao.updateStatus(id, status);
+	}
+
+	/* (non-Javadoc)
+	 * @see com._aepan.sysmgr.service.StoreService#getListByUserId(int)
+	 */
+	@Override
+	public List<Store> getListByUserId(int userId) {
+		// TODO Auto-generated method stub
+		return storeDao.getListByUserId(userId);
+	}
+	@Override
+	public List<Store> getListHasLinkedIds(int userId){
+		List<Store> slist = storeDao.getListByUserId(userId);
+		if(slist!=null&&slist.size()>0){
+			for (Store s : slist) {
+				//关联视频
+				List<StoreVideo> svlist = videoDao.getStoreVideoList(userId, s.getId());
+				if(svlist!=null){
+					s.setLinkedVideoNum(svlist.size());
+					String lvids = "";
+					if(svlist.size()>0){
+						for (StoreVideo sv : svlist) {
+							lvids+= sv.videoId+",";
+						}
+						lvids = lvids.substring(0,lvids.length()-1);
+					}
+					s.linkedVideoIds = lvids;
+				}
+				//播放器logo设置为第一个视频的小图
+				if(svlist!=null&&svlist.size()>0){
+					int videoId = svlist.get(0).getVideoId();
+					if(videoId>0){
+						Video v = videoDao.findVideoById(videoId); 
+						if(v!=null){
+							s.setLogoUrl(v.getImgMin());
+						}
+					}
+				}
+				//关联产品
+				List<StoreProduct> splist = productDao.getStoreProductList(userId, s.getId());
+				if(splist!=null){
+					s.setLinkedProductNum(splist.size());
+					String lpids = "";
+					if(splist.size()>0){
+						for (StoreProduct sp : splist) {
+							lpids+= sp.productId+",";
+						}
+						lpids = lpids.substring(0,lpids.length()-1);
+					}
+					s.linkedProductIds = lpids;
+				}
+				s.escapeHtml();
+			}
+		}
+		return slist;
+	}
+
+	/* (non-Javadoc)
+	 * @see com._aepan.sysmgr.service.StoreService#getProductsByStoreId(int)
+	 */
+	@Override
+	public StoreProducts getProductsByStoreId(int userId, int storeId) {
+		// TODO Auto-generated method stub
+		List<ProductInfo> plist = productDao.getByUserIdAndStoreIdList(userId, storeId);
+		StoreProducts stProducts = new StoreProducts();
+		stProducts.setStoreId(storeId);
+		stProducts.setProductInfoList(plist);
+		return stProducts;
+	}
+
+	/* (non-Javadoc)
+	 * @see com._aepan.sysmgr.service.StoreService#save(com._aepan.sysmgr.model.Store)
+	 */
+	@Override
+	public boolean save(Store store) {
+		//更新拥有播放器数量
+		PackageStat packageStat = packageStatDao.getByUserId(store.getUserId());
+		packageStat.setPlayerNum(packageStat.getPlayerNum()+1);
+		packageStatDao.update(packageStat);
+		store.harmSensitiveWord();
+		return storeDao.save(store);
+	}
+	@Override
+	public void update(ConfigService configService,Store store){
+		store.harmSensitiveWord();
+		//store.addLucene();
+		addLucene(configService,store);
+		storeDao.update(store);
+	}
+	@Override
+	public void delete(int storeId,int userId){
+		storeDao.delete(storeId);
+		//更新拥有播放器数量
+		PackageStat packageStat = packageStatDao.getByUserId(userId);
+		packageStat.setPlayerNum((packageStat.getPlayerNum()-1)>=0?(packageStat.getPlayerNum()-1):0);
+		packageStatDao.update(packageStat);
+		//删除播放器的和商品、视频的关联关系
+		videoDao.deleteByUserIdANDStoreId(userId, storeId);
+		productDao.deleteByUserIdANDStoreId(userId, storeId);
+		
+	}
+	@Override
+	public void addLucene(ConfigService configService,int storeId){
+		Store store = getById(storeId);
+		if(store!=null){
+			addLucene(configService,store);
+		}
+	}
+	@Override
+	public void addLucene(ConfigService configService,Store store){
+		if(store==null) return;
+		int userId = store.getUserId();
+		Document doc = new Document();
+		doc.add(new Field("ID",store.getId()+"",Field.Store.YES,Field.Index.ANALYZED));
+		doc.add(new Field("MultiField",store.getName(),Field.Store.YES,Field.Index.ANALYZED) );
+		doc.add(new Field("MultiField",store.getDescription(),Field.Store.YES,Field.Index.ANALYZED) );
+		List<StoreProduct> spList = productDao.getStoreProductList(userId, store.getId());
+		if(spList!=null&&!spList.isEmpty()){
+			for (StoreProduct sp : spList) {
+				if(sp.getProductName()!=null&&!sp.getProductName().isEmpty()){
+					doc.add(new Field("MultiField",sp.getProductName(),Field.Store.YES,Field.Index.ANALYZED) );
+				}
+				if(sp.getProductDesc()!=null&&!sp.getProductDesc().isEmpty()){
+					doc.add(new Field("MultiField",sp.getProductDesc(),Field.Store.YES,Field.Index.ANALYZED) );
+				}
+				if(sp.getProductType()!=null&&!sp.getProductType().isEmpty()){
+					doc.add(new Field("MultiField",sp.getProductType(),Field.Store.YES,Field.Index.ANALYZED) );
+				}
+			}
+		}
+		List<StoreVideo> svlist = videoDao.getStoreVideoList(userId, store.getId());
+		if(svlist!=null&&!svlist.isEmpty()){
+			for (StoreVideo sv : svlist) {
+				Video v = videoDao.findVideoById(sv.videoId);
+				if(v!=null){
+					doc.add(new Field("MultiField",v.getName(),Field.Store.YES,Field.Index.ANALYZED) );
+					doc.add(new Field("MultiField",v.getDesc(),Field.Store.YES,Field.Index.ANALYZED) );
+				}
+			}
+		}
+		SearchHelper.insert(configService,doc);
+	}
+}

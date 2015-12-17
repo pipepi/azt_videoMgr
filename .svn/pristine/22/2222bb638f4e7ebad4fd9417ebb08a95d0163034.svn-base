@@ -1,0 +1,12 @@
+/**
+ * 
+ */
+package com.aepan.sysmgr.util.lucene;
+
+/**
+ * @author Administrator
+ * 2015年10月30日上午11:58:31
+ */
+public class POIConfig {
+	public static final String DEFULT_POI_LUCENNE_INDEX_PATH = "E:\\code\\video0.3.0\\videoMgr\\lucene\\store";
+}
