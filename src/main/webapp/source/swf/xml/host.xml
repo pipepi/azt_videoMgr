@@ -1,0 +1,27 @@
+
+<host_list>
+	<host id="9cooo">
+		<mall>http://mall-9cooo-01.chinacloudapp.cn</mall>
+		<video>http://app-9cooo-001.chinacloudapp.cn</video>
+		<videoImage>https://pic9cooo.blob.core.chinacloudapi.cn</videoImage>
+	</host>
+
+	<host id="cince">
+		<mall>http://mall-cince-01.chinacloudapp.cn</mall>
+		<video>http://video-cince.chinacloudapp.cn</video>
+		<videoImage>https://picvideocince.blob.core.chinacloudapi.cn</videoImage>
+	</host>
+
+	<host id="dev">
+		<mall>http://192.168.1.250:8080</mall>
+		<video>http://192.168.1.89:8080</video>
+		<videoImage>https://pic9cooo.blob.core.chinacloudapi.cn</videoImage>
+	</host>
+
+	<host id="test">
+		<mall>http://192.168.1.183:8080</mall>
+		<video>http://192.168.1.89:8081</video>
+		<videoImage>https://pic9cooo.blob.core.chinacloudapi.cn</videoImage>
+	</host>
+
+</host_list>
